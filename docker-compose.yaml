@@ -1,0 +1,20 @@
+version: '3.3'
+services:
+    pii:
+        build: ./
+        command: /bin/bash
+        volumes:
+            - $HOME/.aws:/root/.aws
+            - ./.dbt:/root/.dbt
+            - ./.ssh:/root/.ssh
+            - ./:/app/
+    dbt-docs:
+        build: ./
+        restart: always
+        volumes:
+          - ./.dbt:/root/.dbt
+          - ./:/app/
+          - ./.ssh:/root/.ssh
+        ports:
+          - "8080:8080"
+        entrypoint: dbt docs serve
