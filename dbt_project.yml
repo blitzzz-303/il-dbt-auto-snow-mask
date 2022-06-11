@@ -2,7 +2,7 @@
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'pii_project'
+name: 'auto_snow_mask'
 version: '1.0.0'
 config-version: 2
 
@@ -27,7 +27,7 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
 models:
-  pii_project:
+  auto_snow_mask:
     materialized: view
     int:
       materialized: table
