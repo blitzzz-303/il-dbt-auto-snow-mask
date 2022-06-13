@@ -1,8 +1,8 @@
-{% macro create_mp(model, mp_map, n, PII_FUNC_CUSTOM, DEFAULT_TAG = 'default') %}
-     {% set mp = model.database + '.' + model.schema + '.' + model.unique_id | replace('.', '__') + '__' + mp_map.FLD[n] %}
+{% macro create_mp(model, mp_map, PII_FUNC_CUSTOM, DEFAULT_TAG = 'default') %}
+     {% set mp = model.database + '.' + model.schema + '.' + model.unique_id | replace('.', '__') + '__' + mp_map.FLD %}
      
-     {% if mp_map.PII_CUSTOM[n] != DEFAULT_TAG %}
-          {% set call_masking_policy_macro = context[mp_map.PII_CUSTOM[n]]  %}
+     {% if mp_map.PII_CUSTOM != DEFAULT_TAG %}
+          {% set call_masking_policy_macro = context[mp_map.PII_CUSTOM]  %}
           {% do run_query(call_masking_policy_macro(mp)) %}
      {% elif model.meta | length != 0 %}
           {% for k, v in model.meta.items() if k == PII_FUNC_CUSTOM %}
@@ -14,7 +14,7 @@
           RETURNS string ->
                CASE WHEN CURRENT_ROLE() IN ('AUDIT') THEN val
                     WHEN CURRENT_ROLE() IN ('SYSADMIN', 'DATA_ENGINEERING') THEN 
-                    {% if mp_map.SEMANTIC_CATEGORY[n] == 'EMAIL' %}
+                    {% if mp_map.SEMANTIC_CATEGORY == 'EMAIL' %}
                          regexp_replace(val,'.+\@','*****@')
                     {% else %}
                          SHA2(val)
@@ -37,37 +37,38 @@
 {% endmacro %}
 
 
-{% macro get_meta_objs(node_unique_id, meta_key,node_resource_type="model") %}
+{% macro get_meta_objs(node_unique_id, meta_key) %}
 	{% if execute %}
-
         {% set meta_objs = {} %}
-        {% if node_resource_type == "source" %} 
-            {% set columns = graph.sources[node_unique_id]['columns']  %}
-        {% else %}
-            {% set columns = graph.nodes[node_unique_id]['columns']  %}
-        {% endif %}
-
+        {% set columns = graph.nodes[node_unique_id]['columns']  %}
         {% if meta_key is not none %}
-            {% if node_resource_type == "source" %} 
-                {% for column in columns if graph.sources[node_unique_id]['columns'][column]['meta'][meta_key] | length > 0 %}
-                    {% set meta_dict = graph.sources[node_unique_id]['columns'][column]['meta'] %}
-                    {% for key, value in meta_dict.items() if key == meta_key %}
-                        {% do meta_objs.update({column: value}) %}
-                    {% endfor %}
-                {% endfor %}
-            {% else %}
-                {% for column in columns if graph.nodes[node_unique_id]['columns'][column]['meta'][meta_key] | length > 0 %}
+               {% for column in columns if graph.nodes[node_unique_id]['columns'][column]['meta'][meta_key] | length > 0 %}
                     {% set meta_dict = graph.nodes[node_unique_id]['columns'][column]['meta'] %}
                     {% for key, value in meta_dict.items() if key == meta_key %}
                          {% do meta_objs.update({column: value}) %}
                     {% endfor %}
-                {% endfor %}
-            {% endif %}
+               {% endfor %}
         {% endif %}
-
         {{ return(meta_objs) }}
-
     {% endif %}
+{% endmacro %}
+
+
+{% macro get_query_results_as_obj(stm) %}
+     {% set d = dbt_utils.get_query_results_as_dict(stm) %}
+     {% set output_objs = [] %}
+     {% set n_items = [] %}
+     {% for k, v in d.items() if n_items|length == 0 %}
+          {% do n_items.append(v|length) %}
+     {% endfor %}
+     {% for n in range(n_items[0])%}
+          {% set tmp_obj = {} %}
+          {% for k, v in d.items() %}
+               {% do tmp_obj.update({k : v[n]}) %}
+          {% endfor %}
+          {% do output_objs.append(tmp_obj) %}
+     {% endfor %}
+     {{ return(output_objs) }}
 {% endmacro %}
 
 
