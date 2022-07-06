@@ -12,7 +12,7 @@
      {% else %}
           CREATE OR REPLACE MASKING POLICY {{mp}} AS (val string) 
           RETURNS string ->
-               CASE WHEN CURRENT_ROLE() IN ('AUDIT') THEN val
+               CASE WHEN CURRENT_ROLE() IN ('AUDIT', 'DBT_TRANSFORM') THEN val
                     WHEN CURRENT_ROLE() IN ('SYSADMIN', 'DATA_ENGINEERING') THEN 
                     {% if mp_map.SEMANTIC_CATEGORY == 'EMAIL' %}
                          regexp_replace(val,'.+\@','*****@')
@@ -26,14 +26,15 @@
 {% endmacro %}
 
 
-{% macro get_apply_mp_stm(model, fld, mp_name) %}
-          alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
-          modify column {{fld}} 
-          unset masking policy;
-
+{% macro get_apply_mp_stm(model, fld, mp_name, OPERATION_TYPE) %}
+     alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
+     modify column {{fld}} 
+     unset masking policy;
+     {% if OPERATION_TYPE == 'APPLY' %}
           alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
           modify column {{fld}} 
           set masking policy {{mp_name}};
+     {% endif %}
 {% endmacro %}
 
 
