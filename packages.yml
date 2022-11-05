@@ -1,0 +1,4 @@
+packages:
+  - git: https://github.com/hung-il/il-dbt-auto-snow-mask.git
+    revision: uat
+    warn-unpinned: false
