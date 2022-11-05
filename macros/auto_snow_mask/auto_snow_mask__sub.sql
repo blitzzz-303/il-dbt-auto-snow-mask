@@ -10,17 +10,26 @@
                {% do run_query(call_masking_policy_macro(mp)) %}
           {% endfor %}
      {% else %}
-          CREATE OR REPLACE MASKING POLICY {{mp}} AS (val string) 
-          RETURNS string ->
-               CASE WHEN CURRENT_ROLE() IN ('AUDIT', 'DBT_TRANSFORM') THEN val
-                    WHEN CURRENT_ROLE() IN ('SYSADMIN', 'DATA_ENGINEERING') THEN 
-                    {% if mp_map.SEMANTIC_CATEGORY == 'EMAIL' %}
-                         regexp_replace(val,'.+\@','*****@')
-                    {% else %}
-                         SHA2(val)
-                    {% endif %}
-               ELSE '**********'
-               END;
+          declare
+          my_exception exception (-20002, 'Raise');
+          begin
+               CREATE OR REPLACE MASKING POLICY {{mp}} AS (val string) 
+               RETURNS string ->
+                    CASE WHEN CURRENT_ROLE() IN ('AUDIT', 'DBT_TRANSFORM') THEN val
+                         WHEN CURRENT_ROLE() IN ('SYSADMIN', 'DATA_ENGINEERING') THEN 
+                         {% if mp_map.SEMANTIC_CATEGORY == 'EMAIL' %}
+                              regexp_replace(val,'.+\@','*****@')
+                         {% else %}
+                              SHA2(val)
+                         {% endif %}
+                    ELSE '**********'
+                    END;
+          exception
+               when other then
+               return object_construct('SQLCODE', sqlcode,
+                                        'SQLERRM', sqlerrm,
+                                        'SQLSTATE', sqlstate);
+               end;
      {% endif %}
      select '{{mp}}' mp_name;
 {% endmacro %}
