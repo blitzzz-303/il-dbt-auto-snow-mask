@@ -3,7 +3,7 @@ declare
   my_exception exception (-20002, 'Raise');
 begin
 
-    CREATE OR REPLACE MASKING POLICY {{masking_policy_name}} AS (val string) 
+    CREATE MASKING POLICY {{masking_policy_name}} AS (val string) if not exists
 
     RETURNS string ->
         CASE WHEN CURRENT_ROLE() IN ('SYSAUDIT', 'DBT_TRANSFORM') THEN val
