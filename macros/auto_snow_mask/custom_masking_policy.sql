@@ -1,6 +1,6 @@
 {% macro custom_masking_policy(masking_policy_name) %}
 declare
-  my_exception exception (-20002, 'Raised MY_EXCEPTION.');
+  my_exception exception (-20002, 'Raise');
 begin
 
     CREATE OR REPLACE MASKING POLICY {{masking_policy_name}} AS (val string) 
@@ -12,19 +12,8 @@ begin
         END;
 
 exception
-  when statement_error then
-    return object_construct('Error type', 'STATEMENT_ERROR',
-                            'SQLCODE', sqlcode,
-                            'SQLERRM', sqlerrm,
-                            'SQLSTATE', sqlstate);
-  when my_exception then
-    return object_construct('Error type', 'MY_EXCEPTION',
-                            'SQLCODE', sqlcode,
-                            'SQLERRM', sqlerrm,
-                            'SQLSTATE', sqlstate);
   when other then
-    return object_construct('Error type', 'Other error',
-                            'SQLCODE', sqlcode,
+    return object_construct('SQLCODE', sqlcode,
                             'SQLERRM', sqlerrm,
                             'SQLSTATE', sqlstate);
 end;
