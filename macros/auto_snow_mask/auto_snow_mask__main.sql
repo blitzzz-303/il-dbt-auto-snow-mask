@@ -22,6 +22,7 @@
 {% macro create_and_apply_mp(mp_map_objs, OPERATION_TYPE, PII_FUNC_CUSTOM, PII_INGORE_TAG = 'IGNORE') %}
     {% for mp_map_obj in mp_map_objs if mp_map_obj.SEMANTIC_CATEGORY != PII_INGORE_TAG %}
         {% set mp_stm = auto_snow_mask.create_mp(model, mp_map_obj, PII_FUNC_CUSTOM) %}
+        {{print (mp_stm)}}
         {% set mp_name = run_query(mp_stm).columns[0].values()[0] %}
 
         {% if OPERATION_TYPE != 'SCAN' %}
