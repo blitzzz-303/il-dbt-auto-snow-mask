@@ -1,15 +1,8 @@
 version: 2
 
 models:
-  - name: customer_info
+  - name: customer_info_int
     columns:
       - name: City
-        meta:
-          pii: TEXT
-      - name: Email
-        meta:
-          pii: Email
-          pii_custom: custom_masking_policy_email
     meta:
-      pii: TEXT
-      pii_custom: custom_masking_policy
+      pii_custom: custom_generic_text_masking_policy

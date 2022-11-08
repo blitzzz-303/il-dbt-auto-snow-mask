@@ -2,7 +2,7 @@
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'auto_snow_mask'
+name: 'auto_snow_mask_pii'
 version: '1.0.0'
 config-version: 2
 # This setting configures which "profile" dbt uses for this project.
@@ -21,13 +21,13 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 models:
-  auto_snow_mask:
+  auto_snow_mask_pii:
     materialized: view
     int:
       materialized: table
       +tags: "main"
       post-hook: 
-        - "{{ apply_masking_policy() }}"
+        - "{{ auto_snow_mask.apply_masking_policy(var('run_mode')) }}"
     stg:
       materialized: table
       +tags: "main"
