@@ -1,30 +1,23 @@
 {% macro create_mp(model, mp_map, PII_FUNC_CUSTOM, DEFAULT_TAG = 'default') %}
-     {% set mp = model.database + '.' + model.schema + '.' + model.unique_id | replace('.', '__') + '__' + mp_map.FLD %}
-     
+     {% set mp = model.database + '.' + model.schema + '.GENERIC_' + mp_map.SEMANTIC_CATEGORY %}
      {% if mp_map.PII_CUSTOM != DEFAULT_TAG %}
           {% set call_masking_policy_macro = context[mp_map.PII_CUSTOM]  %}
-          {% do run_query(call_masking_policy_macro(mp)) %}
+          {{ call_masking_policy_macro(mp_map, mp) }}
      {% elif model.meta | length != 0 %}
           {% for k, v in model.meta.items() if k == PII_FUNC_CUSTOM %}
                {% set call_masking_policy_macro = context[v]  %}
-               {% do run_query(call_masking_policy_macro(mp)) %}
+               {{ call_masking_policy_macro(mp_map, mp) }}
           {% endfor %}
      {% else %}
-          CREATE OR REPLACE MASKING POLICY {{mp}} AS (val string) 
-          RETURNS string ->
-               CASE WHEN CURRENT_ROLE() IN ('AUDIT', 'DBT_TRANSFORM') THEN val
-                    WHEN CURRENT_ROLE() IN ('SYSADMIN', 'DATA_ENGINEERING') THEN 
-                    {% if mp_map.SEMANTIC_CATEGORY == 'EMAIL' %}
-                         regexp_replace(val,'.+\@','*****@')
-                    {% else %}
-                         SHA2(val)
-                    {% endif %}
-               ELSE '**********'
-               END;
+          {% set custom_generic_mp = context["custom_generic_masking_policy"]  %}
+          {% if custom_generic_mp is defined %}
+               {{ custom_generic_mp(mp_map, mp) }}
+          {% else %}
+               {{ auto_snow_mask.default_generic_masking_policy(mp_map, mp) }}
+          {% endif %}
      {% endif %}
      select '{{mp}}' mp_name;
 {% endmacro %}
-
 
 {% macro get_apply_mp_stm(model, fld, mp_name, OPERATION_TYPE) %}
      alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
@@ -97,19 +90,21 @@
      semantic as (
           select
                lower(KEY) fld,
-               f.value:"privacy_catgory"::varchar privacy_category,
-               f.value:"semantic_category"::varchar semantic_category,
-               f.value:"extra_info":"probability"::numeric probability
+               coalesce(f.value:"semantic_category",
+                        f.value:"extra_info":"alternates"[0]:semantic_category)::varchar semantic_category,
+               coalesce(f.value:"extra_info":"probability",
+                        f.value:"extra_info":"alternates"[0]:probability)::double probability
           from
           TABLE (flatten(extract_semantic_categories('{{model.relation_name}}', {{limit}})::variant)) as f
           where probability >= {{threshold}})
      select 
           fld,
+          data_type,
           coalesce(mfc.semantic_category, s.semantic_category) semantic_category,
           coalesce(mpc.pii_custom, 'default') pii_custom
      from tbl_info
      left join semantic s using (fld)
      left join meta_fld_conf mfc using (fld)
      left join meta_pii_custom mpc using (fld)
-     where (data_type = 'TEXT' and semantic_category is not null) or mfc.semantic_category is not null;
+     where coalesce(s.semantic_category, mfc.semantic_category) is not null;
 {% endmacro %}
