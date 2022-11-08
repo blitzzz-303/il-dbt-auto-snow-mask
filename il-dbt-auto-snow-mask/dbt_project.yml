@@ -1,0 +1,11 @@
+name: 'auto_snow_mask'
+version: '1.0.0'
+config-version: 2
+
+target-path: "target"
+clean-targets:
+  - "target"
+
+models:
+  auto_snow_mask:
+    materialized: view
