@@ -32,19 +32,15 @@
 
 
 {% macro get_meta_objs(node_unique_id, meta_key) %}
-	{% if execute %}
-        {% set meta_objs = {} %}
-        {% set columns = graph.nodes[node_unique_id]['columns']  %}
-        {% if meta_key is not none %}
-               {% for column in columns if graph.nodes[node_unique_id]['columns'][column]['meta'][meta_key] | length > 0 %}
-                    {% set meta_dict = graph.nodes[node_unique_id]['columns'][column]['meta'] %}
-                    {% for key, value in meta_dict.items() if key == meta_key %}
-                         {% do meta_objs.update({column: value}) %}
-                    {% endfor %}
+     {% set meta_objs = {} %}
+     {% if meta_key %}
+          {% for table in graph.nodes[node_unique_id]['config']['tables'] %}
+               {% for column in table['columns'] if column['meta'][meta_key] %}
+                    {% do meta_objs.update({column['name']: column['meta'][meta_key]}) %}
                {% endfor %}
-        {% endif %}
-        {{ return(meta_objs) }}
-    {% endif %}
+          {% endfor %}
+     {% endif %}
+     {{ return(meta_objs) }}
 {% endmacro %}
 
 
