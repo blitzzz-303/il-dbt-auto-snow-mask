@@ -15,18 +15,30 @@ clean-targets:
 models:
   auto_snow_mask_pii:
     materialized: view
+    # generic / default function test
     int:
       materialized: table
       +tags: "main"
       tables:
       - name: customer_info_int
         columns:
+          # ignore PII action
           - name: country
             meta:
               pii: IGNORE
-          
+          # explicit masking requirement
+          - name: BITCOIN_ADDRESS
+            meta:
+              pii: TEXT
+          - name: ETHEREUM_ADDRESS
+            meta:
+              pii: TEXT
+          - name: PASSWORD
+            meta:
+              pii: TEXT
+    # post-hook action to trigger Auto masking PII package.
       post-hook: 
-        - "{{ auto_snow_mask.apply_masking_policy(var('run_mode')) }}"
+        - "{{ auto_snow_mask.apply_masking_policy(var('run_mode'), threshold=0.2) }}"
     stg:
       materialized: table
       +tags: "main"

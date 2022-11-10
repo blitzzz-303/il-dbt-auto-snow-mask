@@ -17,7 +17,7 @@
                 {% if mp_map.SEMANTIC_CATEGORY == 'EMAIL' %}
                         regexp_replace(val, '.+\@', SHA2(split(val, '@')[0]) || '@')
                 {% else %}
-                        SHA2(val)
+                        'HASHED - ' || SHA2(val)
                 {% endif %}
         ELSE '***MASKED***'
         END;
