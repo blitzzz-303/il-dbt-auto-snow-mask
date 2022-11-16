@@ -3,11 +3,6 @@
      {% if mp_map.PII_CUSTOM != DEFAULT_TAG %}
           {% set call_masking_policy_macro = context[mp_map.PII_CUSTOM]  %}
           {{ call_masking_policy_macro(mp_map, mp) }}
-     {% elif model.meta | length != 0 %}
-          {% for k, v in model.meta.items() if k == PII_FUNC_CUSTOM %}
-               {% set call_masking_policy_macro = context[v]  %}
-               {{ call_masking_policy_macro(mp_map, mp) }}
-          {% endfor %}
      {% else %}
           {% set custom_generic_mp = context["custom_generic_masking_policy"]  %}
           {% if custom_generic_mp is defined %}
@@ -20,9 +15,11 @@
 {% endmacro %}
 
 {% macro get_apply_mp_stm(model, fld, mp_name, OPERATION_TYPE) %}
-     alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
-     modify column {{fld}} 
-     unset masking policy;
+     {% if OPERATION_TYPE == 'UNAPPLY' %}
+          alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
+          modify column {{fld}} 
+          unset masking policy;
+     {% endif %}
      {% if OPERATION_TYPE == 'APPLY' %}
           alter {{model.config.get("materialized")}}  {{model.database}}.{{model.schema}}.{{model.alias}}
           modify column {{fld}} 
@@ -68,13 +65,15 @@
      meta_fld_conf as(
           select 
                lower(key) fld,
-               value semantic_category
+               value semantic_category,
+               'MANUAL' masking_task
           from table(flatten(input => parse_json('{{meta_fld_obj | replace("\'","\"")}}'))) f
      ),
      meta_pii_custom as (
           select 
                lower(key) fld,
-               value pii_custom
+               value pii_custom,
+               'MANUAL' masking_task
           from table(flatten(input => parse_json('{{meta_pii_custom_obj | replace("\'","\"")}}'))) f
      ),
      tbl_info as(
@@ -86,6 +85,7 @@
      semantic as (
           select
                lower(KEY) fld,
+               '[AUTO]' masking_task,
                coalesce(f.value:"semantic_category",
                         f.value:"extra_info":"alternates"[0]:semantic_category)::varchar semantic_category,
                coalesce(f.value:"extra_info":"probability",
@@ -97,7 +97,8 @@
           fld,
           data_type,
           coalesce(mfc.semantic_category, s.semantic_category) semantic_category,
-          coalesce(mpc.pii_custom, 'default') pii_custom
+          coalesce(mpc.pii_custom, 'default') pii_custom,
+          coalesce(s.masking_task, mfc.masking_task, mpc.masking_task) masking_task
      from tbl_info
      left join semantic s using (fld)
      left join meta_fld_conf mfc using (fld)
