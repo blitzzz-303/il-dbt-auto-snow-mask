@@ -7,14 +7,15 @@ services:
             - $HOME/.aws:/root/.aws
             - ./.dbt:/root/.dbt
             - ./.ssh:/root/.ssh
-            - ./:/app/
+            - ./:/dbt
     dbt-docs:
         build: ./
         restart: always
         volumes:
-          - ./.dbt:/root/.dbt
-          - ./:/app/
-          - ./.ssh:/root/.ssh
+            - $HOME/.aws:/root/.aws
+            - ./.dbt:/root/.dbt
+            - ./.ssh:/root/.ssh
+            - ./:/dbt
         ports:
           - "8080:8080"
         entrypoint: dbt docs serve
